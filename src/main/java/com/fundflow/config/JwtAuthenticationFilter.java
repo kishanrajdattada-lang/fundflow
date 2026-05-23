@@ -1,5 +1,6 @@
 package com.fundflow.config;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Locale;
 
 @Component
 @RequiredArgsConstructor
@@ -36,8 +38,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        jwt = authHeader.substring(7);
-        userEmail = jwtService.extractUsername(jwt);
+        jwt = extractBearerToken(authHeader);
+        if (jwt.isBlank()) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing bearer token");
+            return;
+        }
+
+        try {
+            userEmail = jwtService.extractUsername(jwt);
+        } catch (JwtException | IllegalArgumentException ex) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid bearer token");
+            return;
+        }
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
             if (jwtService.isTokenValid(jwt, userDetails)) {
@@ -53,5 +65,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    private String extractBearerToken(String authHeader) {
+        String token = authHeader.substring(7).trim();
+        if (token.toLowerCase(Locale.ROOT).startsWith("bearer ")) {
+            token = token.substring(7).trim();
+        }
+        return token;
     }
 }

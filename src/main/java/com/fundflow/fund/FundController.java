@@ -1,6 +1,10 @@
 package com.fundflow.fund;
 
 import com.fundflow.common.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,11 +18,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/funds")
 @RequiredArgsConstructor
+@Tag(name = "Funds", description = "Endpoints for managing and purchasing funds")
 public class FundController {
 
     private final FundRepository fundRepository;
     private final FundService fundService;
 
+    @Operation(summary = "List all funds", description = "Returns a list of all available investment funds.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Funds fetched successfully")
     @GetMapping
     public ApiResponse<List<Fund>> listFunds() {
         return ApiResponse.<List<Fund>>builder()
@@ -28,6 +35,12 @@ public class FundController {
                 .build();
     }
 
+    @Operation(summary = "Create a new fund", description = "Creates a new investment fund. Requires ADMIN role.", security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses(value = {
+        /*@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Fund created successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - Requires ADMIN role"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Conflict - ISIN already exists")*/
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
@@ -52,6 +65,12 @@ public class FundController {
                 .build();
     }
 
+    @Operation(summary = "Purchase units of a fund", description = "Allows an investor to buy units of a fund. Requires INVESTOR role.", security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Fund purchased successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - Requires INVESTOR role"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Fund not found")
+    })
     @PostMapping("/{fundId}/buy")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('INVESTOR')")
